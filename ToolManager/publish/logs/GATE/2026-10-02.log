@@ -1,0 +1,49 @@
+09:26:45 >>> Đã khởi động (PID 20852) D:\jobs\IT\pcx\Batch_input_api\publics\Batch_input_API.exe
+09:26:50 info: Microsoft.Hosting.Lifetime[14]
+09:26:50       Now listening on: http://0.0.0.0:5044
+09:26:50 info: Microsoft.Hosting.Lifetime[0]
+09:26:50       Application started. Press Ctrl+C to shut down.
+09:26:50 info: Microsoft.Hosting.Lifetime[0]
+09:26:50       Hosting environment: Production
+09:26:50 info: Microsoft.Hosting.Lifetime[0]
+09:26:50       Content root path: D:\jobs\IT\pcx\Batch_input_api\publics
+09:27:25 warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+09:27:25       Failed to determine the https port for redirect.
+09:27:26 fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+09:27:26       An unhandled exception has occurred while executing the request.
+09:27:26       System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.Data.SqlClient.Extensions.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5'. The system cannot find the file specified.
+09:27:26       File name: 'Microsoft.Data.SqlClient.Extensions.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5'
+09:27:26          at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerConnection.<>c.<get_IsMultipleActiveResultSetsEnabled>b__7_0(String cs)
+09:27:26          at System.Collections.Concurrent.ConcurrentDictionary`2.GetOrAdd(TKey key, Func`2 valueFactory)
+09:27:26          at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerConnection.get_IsMultipleActiveResultSetsEnabled()
+09:27:26          at Microsoft.EntityFrameworkCore.SqlServer.Query.Internal.SqlServerCompiledQueryCacheKeyGenerator.GenerateCacheKey(Expression query, Boolean async)
+09:27:26          at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+09:27:26          at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+09:27:26          at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1.GetAsyncEnumerator(CancellationToken cancellationToken)
+09:27:26          at System.Runtime.CompilerServices.ConfiguredCancelableAsyncEnumerable`1.GetAsyncEnumerator()
+09:27:26          at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync[TSource](IQueryable`1 source, CancellationToken cancellationToken)
+09:27:26          at Batch_input_API.Controllers.BatchController.Get_noteComplate_BatchInput() in D:\jobs\IT\pcx\Batch_input_api\api_batchinput\Batch_input_API\Batch_input_API\Controllers\BatchController.cs:line 81
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.InvokeInnerFilterAsync()
+09:27:26       --- End of stack trace from previous location ---
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+09:27:26          at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+09:27:26          at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+09:27:26          at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+09:31:24 >>> Đang dừng tool...
+09:31:25 >>> Đã dừng.
+09:31:25 >>> Đã khởi động (PID 12400) D:\jobs\IT\pcx\Batch_input_api\publics\Batch_input_API.exe
+09:31:26 info: Microsoft.Hosting.Lifetime[14]
+09:31:26       Now listening on: http://0.0.0.0:5044
+09:31:26 info: Microsoft.Hosting.Lifetime[0]
+09:31:26       Application started. Press Ctrl+C to shut down.
+09:31:26 info: Microsoft.Hosting.Lifetime[0]
+09:31:26       Hosting environment: Production
+09:31:26 info: Microsoft.Hosting.Lifetime[0]
+09:31:26       Content root path: D:\jobs\IT\pcx\Batch_input_api\publics
+09:43:38 >>> Đã dừng.

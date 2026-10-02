@@ -1,0 +1,191 @@
+<Window x:Class="ToolManager.ToolEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Thông tin tool" Width="620" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource SurfaceBrush}"
+        FontFamily="{StaticResource AppFont}" FontSize="13"
+        Foreground="{StaticResource TextBrush}"
+        UseLayoutRounding="True">
+
+    <Window.Resources>
+        <Style x:Key="OptionRow" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,11"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        </Style>
+        <Style x:Key="OptionTitle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <DockPanel Grid.Row="0" Margin="24,22,24,6">
+            <Border DockPanel.Dock="Left" Width="40" Height="40" CornerRadius="10" Background="{StaticResource AccentSoftBrush}">
+                <TextBlock x:Name="HeaderIcon" Style="{StaticResource IconText}" Text="&#xE710;" FontSize="16"
+                           Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+            </Border>
+            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="HeaderTitle" Text="Thêm tool" FontSize="17" FontWeight="SemiBold"/>
+                <TextBlock Text="Khai báo file chạy và cách Tool Manager quản lý tool này" FontSize="12"
+                           Foreground="{StaticResource TextMutedBrush}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Nội dung (cuộn được khi màn hình thấp) -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,12,24,20">
+
+            <TextBlock Text="THÔNG TIN CƠ BẢN" Style="{StaticResource SectionLabel}" Margin="0,4,0,12"/>
+
+            <TextBlock Style="{StaticResource FieldLabel}">
+                <Run Text="Tên tool"/><Run Text=" *" Foreground="{StaticResource DangerBrush}"/>
+            </TextBlock>
+            <TextBox x:Name="NameBox" Margin="0,0,0,14"/>
+
+            <TextBlock Style="{StaticResource FieldLabel}">
+                <Run Text="File chạy (.exe / .bat / .cmd)"/><Run Text=" *" Foreground="{StaticResource DangerBrush}"/>
+            </TextBlock>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="ExeBox"/>
+                <Button Grid.Column="1" Click="BrowseExe_Click" Margin="8,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource IconText}" Text="&#xE8E5;" FontSize="12" Margin="0,0,6,0"/>
+                        <TextBlock Text="Chọn file"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Tham số (args)" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="ArgsBox"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Thư mục làm việc" Style="{StaticResource FieldLabel}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="WorkDirBox"/>
+                        <Button Grid.Column="1" Click="BrowseDir_Click" Margin="6,0,0,0" Padding="10,7" ToolTip="Chọn thư mục">
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE838;" FontSize="13"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="Để trống thư mục làm việc = dùng thư mục chứa file exe (giống khi double-click exe)."
+                       Style="{StaticResource HintText}" Margin="0,0,0,18"/>
+
+            <TextBlock Text="CÁCH CHẠY" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+
+            <Border Style="{StaticResource OptionRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" x:Name="AutoStartCheck" Style="{StaticResource Switch}"/>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Tự chạy khi mở Tool Manager" Style="{StaticResource OptionTitle}"/>
+                        <TextBlock Text="Tool được start ngay khi Tool Manager khởi động." Style="{StaticResource HintText}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource OptionRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" x:Name="AutoRestartCheck" Style="{StaticResource Switch}"/>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Tự chạy lại khi tool bị tắt" Style="{StaticResource OptionTitle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                    IsEnabled="{Binding IsChecked, ElementName=AutoRestartCheck}">
+                            <TextBlock Text="Chờ" Style="{StaticResource HintText}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="DelayBox" Width="56" Margin="8,0" Padding="6,4" TextAlignment="Center"/>
+                            <TextBlock Text="giây trước khi chạy lại" Style="{StaticResource HintText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource OptionRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" x:Name="HideWindowCheck" Style="{StaticResource Switch}"/>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Ẩn cửa sổ cmd và hiển thị log trong Tool Manager" Style="{StaticResource OptionTitle}"/>
+                        <TextBlock Text="Tắt tùy chọn này nếu tool là app có giao diện (WPF / WinForms)."
+                                   Style="{StaticResource HintText}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Cần log nên chỉ bật được khi "Ẩn cửa sổ cmd và hiển thị log" đang bật -->
+            <Border Style="{StaticResource OptionRow}" IsEnabled="{Binding IsChecked, ElementName=HideWindowCheck}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" x:Name="RestartOnErrorCheck" Style="{StaticResource Switch}"/>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Tự restart khi log có lỗi" Style="{StaticResource OptionTitle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                    IsEnabled="{Binding IsChecked, ElementName=RestartOnErrorCheck}">
+                            <TextBlock Text="Restart khi có" Style="{StaticResource HintText}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="ErrorCountBox" Width="56" Margin="8,0" Padding="6,4" TextAlignment="Center"/>
+                            <TextBlock Text="lỗi kể từ lần chạy gần nhất" Style="{StaticResource HintText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource HintText}" Margin="0,6,0,0"
+                                   Text="Chờ ghi xong lỗi (stack trace) rồi mới dừng, sau đó chờ số giây ở mục trên rồi chạy lại. Tối đa 3 lần trong 10 phút, quá thì chỉ báo lỗi để tránh restart liên tục."/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <StackPanel Margin="0,10,0,0" IsEnabled="{Binding IsChecked, ElementName=HideWindowCheck}">
+                <TextBlock Text="MÃ HÓA LOG" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="Utf8Radio" GroupName="Encoding" Style="{StaticResource Segment}" Content="UTF-8"/>
+                    <RadioButton x:Name="OemRadio" GroupName="Encoding" Style="{StaticResource Segment}" Content="Mặc định console (OEM)"/>
+                </StackPanel>
+                <TextBlock Text="Nếu log hiển thị sai tiếng Việt thì đổi sang lựa chọn còn lại."
+                           Style="{StaticResource HintText}" Margin="0,8,0,0"/>
+            </StackPanel>
+        </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource SurfaceAltBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Hủy" IsCancel="True" MinWidth="96" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource PrimaryButton}" Click="Save_Click" IsDefault="True" MinWidth="110">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE74E;" FontSize="12" Margin="0,0,8,0"/>
+                            <TextBlock Text="Lưu"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel x:Name="ErrorPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE783;" FontSize="13"
+                               Foreground="{StaticResource DangerBrush}" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerTextBrush}" FontWeight="SemiBold"
+                               TextWrapping="Wrap" MaxWidth="330"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

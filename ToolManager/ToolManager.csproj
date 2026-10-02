@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>ToolManager</AssemblyName>
+    <RootNamespace>ToolManager</RootNamespace>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>icons8-module-94.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Resource: nhúng vào exe để XAML dùng được qua Icon="/icons8-module-94.ico" -->
+    <Resource Include="icons8-module-94.ico" />
+  </ItemGroup>
+
+</Project>

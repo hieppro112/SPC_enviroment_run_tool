@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "b917a73b2c0a41dda046a21aa1b433d0",
+    "Name": "GATE",
+    "ExePath": "D:\\jobs\\IT\\pcx\\Batch_input_api\\publics\\Batch_input_API.exe",
+    "Arguments": "",
+    "WorkingDirectory": "",
+    "AutoStart": false,
+    "AutoRestart": true,
+    "RestartDelaySeconds": 5,
+    "HideWindow": true,
+    "OutputEncoding": "utf-8"
+  }
+]
