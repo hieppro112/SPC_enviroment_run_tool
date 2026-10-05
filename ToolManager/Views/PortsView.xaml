@@ -1,0 +1,498 @@
+<UserControl x:Class="ToolManager.Views.PortsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===================== Thanh tiêu đề trang ===================== -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                <TextBlock Text="Port trên máy này" FontSize="15" FontWeight="SemiBold"/>
+                <TextBlock FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                           Text="Port trống được ưu tiên hiện trên đầu. Tự làm mới mỗi 5 giây khi đang mở trang này."/>
+            </StackPanel>
+
+            <Button DockPanel.Dock="Right" Click="Refresh_Click" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE72C;" FontSize="12" Margin="0,0,8,0"/>
+                    <TextBlock Text="Làm mới"/>
+                </StackPanel>
+            </Button>
+            <TextBlock DockPanel.Dock="Right" x:Name="UpdatedText" VerticalAlignment="Center" Margin="0,0,14,0"
+                       FontSize="12" Foreground="{StaticResource TextMutedBrush}"/>
+            <Border DockPanel.Dock="Right" Style="{StaticResource Chip}" Margin="0,0,14,0" Padding="10,4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE968;" FontSize="12" Margin="0,0,6,0"
+                               Foreground="{StaticResource TextMutedBrush}"/>
+                    <TextBlock Text="IP máy này: " FontSize="12" Foreground="{StaticResource TextMutedBrush}"/>
+                    <TextBlock x:Name="LocalIpText" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}"/>
+                </StackPanel>
+            </Border>
+            <Border DockPanel.Dock="Right" x:Name="ToastBorder" Style="{StaticResource Chip}" Margin="0,0,14,0" Padding="10,4"
+                    Background="{StaticResource SuccessSoftBrush}" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE73E;" FontSize="11" Margin="0,0,6,0"
+                               Foreground="{StaticResource SuccessTextBrush}"/>
+                    <TextBlock x:Name="ToastText" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessTextBrush}"/>
+                </StackPanel>
+            </Border>
+        </DockPanel>
+
+        <!-- ===================== Port trống + kiểm tra nhanh ===================== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="1*" MinWidth="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Port trống -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="18,14,10,10">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,8,12" LastChildFill="False">
+                        <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="9" Background="{StaticResource SuccessSoftBrush}">
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE73E;" FontSize="15"
+                                       Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center"/>
+                        </Border>
+                        <StackPanel DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Port trống có thể dùng ngay" FontSize="14.5" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="FreeSummary" FontSize="12" Foreground="{StaticResource TextMutedBrush}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <!-- Khoảng port cần tìm -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,8,12">
+                        <TextBlock Text="Khoảng port" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox x:Name="RangeBox" Width="260" Margin="0,0,6,0" VerticalAlignment="Center"
+                                 FontFamily="{StaticResource MonoFont}" KeyDown="RangeBox_KeyDown"
+                                 ToolTip="Có thể nhập nhiều khoảng, vd: 5000-5999, 7000-7100"/>
+                        <Button Style="{StaticResource SmallButton}" Content="Áp dụng" Click="ApplyRange_Click" VerticalAlignment="Center"/>
+                        <TextBlock Text="Nhiều khoảng cách nhau bằng dấu phẩy" Margin="12,0,0,0" VerticalAlignment="Center"
+                                   FontSize="12" Foreground="{StaticResource TextSubtleBrush}"/>
+                    </StackPanel>
+
+                    <TextBlock DockPanel.Dock="Top" x:Name="RangeError" Visibility="Collapsed" Margin="0,-6,8,10"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}"/>
+
+                    <Grid>
+                        <ItemsControl x:Name="FreeList" ItemsSource="{Binding FreePorts}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemWidth="160"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,8,8" Padding="12,5,5,5" CornerRadius="8"
+                                            Background="{StaticResource SurfaceBrush}"
+                                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                                        <DockPanel>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Style="{StaticResource SmallIconButton}" Content="&#xE8C8;"
+                                                        ToolTip="Copy port" Tag="{Binding}" Click="CopyPort_Click"/>
+                                                <Button Style="{StaticResource SmallIconButton}" Content="&#xE71B;"
+                                                        ToolTip="Copy URL đầy đủ (http://IP:port)" Tag="{Binding}" Click="CopyUrl_Click"/>
+                                                <Button Style="{StaticResource SmallIconButton}" Content="&#xE718;"
+                                                        ToolTip="Đặt trước port này cho một app" Tag="{Binding}" Click="Reserve_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="7" Height="7" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding}" FontFamily="{StaticResource MonoFont}" FontSize="15" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel x:Name="FreeEmpty" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20">
+                            <TextBlock x:Name="FreeEmptyText" Text="Đang quét port..." Foreground="{StaticResource TextMutedBrush}"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </DockPanel>
+            </Border>
+
+            <!-- Cột phải -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Kiểm tra nhanh -->
+                <Border Grid.Row="0" Style="{StaticResource Card}" Padding="16,14">
+                    <StackPanel>
+                        <TextBlock Text="Kiểm tra nhanh 1 port" FontSize="14.5" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <TextBox x:Name="QuickBox" Padding="32,6,8,6" FontFamily="{StaticResource MonoFont}"
+                                     TextChanged="QuickBox_TextChanged"/>
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE721;" FontSize="12" Margin="12,0,0,0"
+                                       Foreground="{StaticResource TextSubtleBrush}" IsHitTestVisible="False"/>
+                            <TextBlock Text="Nhập số port, vd: 7931" Margin="34,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{StaticResource TextSubtleBrush}" IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=QuickBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
+                        <Border x:Name="QuickResult" Margin="0,10,0,0" CornerRadius="8" Padding="12,10" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="QuickIcon" Style="{StaticResource IconText}" FontSize="13" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="QuickTitle" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <TextBlock x:Name="QuickDetail" FontSize="12" Margin="21,4,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <StackPanel x:Name="QuickActions" Orientation="Horizontal" Margin="21,8,0,0" Visibility="Collapsed">
+                                    <Button Style="{StaticResource SmallButton}" Click="QuickCopy_Click" Margin="0,0,6,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource IconText}" Text="&#xE8C8;" FontSize="11" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Copy"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource SmallButton}" Click="QuickCopyUrl_Click" Margin="0,0,6,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource IconText}" Text="&#xE71B;" FontSize="11" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Copy URL"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="QuickReserveButton" Style="{StaticResource SmallButton}" Click="QuickReserve_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource IconText}" Text="&#xE718;" FontSize="11" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Đặt trước"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Đặt trước + dải Windows giữ chỗ -->
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="16,14">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock DockPanel.Dock="Right" x:Name="ReservedCount" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text="Port đã đặt trước" FontSize="14.5" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="118" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Reservations}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,0,4,6">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource SmallIconButton}" Content="&#xE74D;"
+                                                    ToolTip="Bỏ đặt trước" Tag="{Binding}" Click="RemoveReservation_Click"/>
+                                            <Border DockPanel.Dock="Left" Style="{StaticResource Chip}" Background="{StaticResource WarningSoftBrush}"
+                                                    Margin="0,0,10,0" Padding="8,2">
+                                                <TextBlock Text="{Binding Port}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource WarningTextBrush}"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Note}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Info}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock x:Name="ReservedEmpty" Text="Chưa có port nào được đặt trước." FontSize="12"
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+
+                        <TextBlock Text="DẢI PORT WINDOWS GIỮ CHỖ (HYPER-V / WSL / DOCKER)" Style="{StaticResource SectionLabel}" Margin="0,10,0,6"/>
+                        <ItemsControl x:Name="ExcludedList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Chip}" Margin="0,0,6,6">
+                                        <TextBlock Text="{Binding}" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                                   Foreground="{StaticResource NeutralTextBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="ExcludedEmpty" Text="Không có dải nào bị giữ chỗ." FontSize="12"
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ===================== Web trên máy này / Port đang bị chiếm ===================== -->
+        <Border Grid.Row="3" Style="{StaticResource Card}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="18,12" LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="WebTabRadio" GroupName="BottomTab" Style="{StaticResource Segment}"
+                                         Checked="BottomTab_Checked">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconText}" Text="&#xE774;" FontSize="12" Margin="0,0,7,0"/>
+                                    <TextBlock x:Name="WebTabText" Text="Web trên máy này"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="BusyTabRadio" GroupName="BottomTab" Style="{StaticResource Segment}"
+                                         Checked="BottomTab_Checked">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconText}" Text="&#xE968;" FontSize="12" Margin="0,0,7,0"/>
+                                    <TextBlock x:Name="BusyTabText" Text="Port đang bị chiếm"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                        <TextBlock x:Name="WebSummary" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="2,8,0,0"/>
+                        <TextBlock x:Name="BusySummary" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="2,8,0,0"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
+
+                    <!-- Nút của bảng Web -->
+                    <StackPanel DockPanel.Dock="Right" x:Name="WebActions" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource SmallButton}" Click="ReloadWebs_Click" Margin="0,0,6,0"
+                                ToolTip="Đọc lại danh sách web từ database">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource IconText}" Text="&#xE72C;" FontSize="11" Margin="0,0,6,0"/>
+                                <TextBlock Text="Tải lại"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SmallButton}" Click="ConfigureWebDb_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource IconText}" Text="&#xE713;" FontSize="11" Margin="0,0,6,0"/>
+                                <TextBlock Text="Cấu hình database"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <Grid DockPanel.Dock="Right" x:Name="BusySearchPanel" Width="260" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBox x:Name="BusySearch" Padding="32,6,8,6" TextChanged="BusySearch_TextChanged"/>
+                        <TextBlock Style="{StaticResource IconText}" Text="&#xE721;" FontSize="12" Margin="12,0,0,0"
+                                   Foreground="{StaticResource TextSubtleBrush}" IsHitTestVisible="False"/>
+                        <TextBlock Text="Tìm theo port, tên app, PID..." Margin="34,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextSubtleBrush}" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=BusySearch}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </DockPanel>
+
+                <!-- Bảng Web trên máy này -->
+                <Grid Grid.Row="1" x:Name="WebPanel">
+                    <DataGrid x:Name="WebGrid" Style="{StaticResource ToolDataGrid}" RowHeight="46"
+                              ItemsSource="{Binding WebPorts}" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="TÊN WEB" Width="1.2*" MinWidth="200">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding Name}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="URL" Width="1.4*" MinWidth="220">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="12" TextTrimming="CharacterEllipsis">
+                                            <Hyperlink NavigateUri="{Binding Url}" Click="OpenWeb_Click" Foreground="{StaticResource AccentBrush}"
+                                                       ToolTip="Mở web bằng trình duyệt">
+                                                <Run Text="{Binding Url, Mode=OneWay}"/>
+                                            </Hyperlink>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="PORT" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Port}" FontFamily="{StaticResource MonoFont}" FontSize="13.5" FontWeight="SemiBold"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="TRẠNG THÁI" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Pill" CornerRadius="11" Padding="9,3,11,3" HorizontalAlignment="Left"
+                                                Background="{StaticResource NeutralSoftBrush}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse x:Name="Dot" Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center"
+                                                         Fill="{StaticResource TextSubtleBrush}"/>
+                                                <TextBlock x:Name="Txt" Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource NeutralTextBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                <Setter TargetName="Pill" Property="Background" Value="{StaticResource SuccessSoftBrush}"/>
+                                                <Setter TargetName="Dot" Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                                <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource SuccessTextBrush}"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="APP ĐANG MỞ PORT" Width="1.3*" MinWidth="200">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding OwnerDisplay}" VerticalAlignment="Center" FontSize="12.5"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                            <Border Style="{StaticResource Chip}" Margin="8,0,0,0" Background="{StaticResource AccentSoftBrush}"
+                                                    Visibility="{Binding IsManaged, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding ToolLabel}" FontSize="11.5" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource AccentBrush}"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="THAO TÁC" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE774;" ToolTip="Mở web bằng trình duyệt"
+                                                    Foreground="{StaticResource AccentBrush}" Click="OpenWebButton_Click"/>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Copy URL"
+                                                    Click="CopyWebUrl_Click"/>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE8A7;" ToolTip="Xem tool này ở tab Tools"
+                                                    Foreground="{StaticResource AccentBrush}" Click="GoToWebTool_Click"
+                                                    Visibility="{Binding IsManaged, Converter={StaticResource BoolToVisibility}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Chưa cấu hình / lỗi / không có web nào -->
+                    <StackPanel x:Name="WebMessagePanel" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"
+                                MaxWidth="640" Margin="0,10">
+                        <Border Width="48" Height="48" CornerRadius="24" Background="{StaticResource NeutralSoftBrush}" HorizontalAlignment="Center">
+                            <TextBlock x:Name="WebMessageIcon" Style="{StaticResource IconText}" Text="&#xE774;" FontSize="20"
+                                       Foreground="{StaticResource TextSubtleBrush}" HorizontalAlignment="Center"/>
+                        </Border>
+                        <TextBlock x:Name="WebMessageTitle" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,4"/>
+                        <TextBlock x:Name="WebMessageDetail" Style="{StaticResource HintText}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <Button x:Name="WebMessageButton" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Center" Margin="0,12,0,0"
+                                Click="ConfigureWebDb_Click" Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource IconText}" Text="&#xE713;" FontSize="12" Margin="0,0,8,0"/>
+                                <TextBlock Text="Cấu hình database"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Bảng port đang bị chiếm -->
+                <Grid Grid.Row="1" x:Name="BusyPanel" Visibility="Collapsed">
+                <DataGrid x:Name="BusyGrid" Style="{StaticResource ToolDataGrid}" RowHeight="46"
+                          ItemsSource="{Binding BusyPorts}" Margin="0,0,0,8">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="PORT" Width="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Port}" FontFamily="{StaticResource MonoFont}" FontSize="13.5" FontWeight="SemiBold"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="ĐỊA CHỈ IP" Width="190">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Addresses}" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Addresses}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="APP" Width="1.2*" MinWidth="200">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding AppName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <Border Style="{StaticResource Chip}" Margin="8,0,0,0" Background="{StaticResource AccentSoftBrush}"
+                                                Visibility="{Binding IsManaged, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="{Binding ToolLabel}" FontSize="11.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource AccentBrush}"/>
+                                        </Border>
+                                        <Border Style="{StaticResource Chip}" Margin="8,0,0,0"
+                                                Visibility="{Binding IsSystem, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="Hệ thống" FontSize="11.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource NeutralTextBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="PID" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Pid}" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="ĐƯỜNG DẪN EXE" Width="2*" MinWidth="200">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding PathDisplay}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding PathDisplay}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="THAO TÁC" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Mở thư mục chứa exe"
+                                                IsEnabled="{Binding HasPath}" Click="OpenFolder_Click"/>
+                                        <Button Style="{StaticResource IconButton}" Content="&#xE8A7;" ToolTip="Xem tool này ở tab Tools"
+                                                Foreground="{StaticResource AccentBrush}" Click="GoToTool_Click"
+                                                Visibility="{Binding IsManaged, Converter={StaticResource BoolToVisibility}}"/>
+                                        <Button Style="{StaticResource IconDangerButton}" Content="&#xE711;" ToolTip="{Binding KillTooltip}"
+                                                IsEnabled="{Binding CanKill}" ToolTipService.ShowOnDisabled="True"
+                                                Click="Kill_Click"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <TextBlock x:Name="BusyEmpty" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextMutedBrush}"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

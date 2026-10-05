@@ -40,6 +40,8 @@ public partial class MainWindow : Window
         _logTimer.Start();
         _tickTimer.Start();
 
+        PortsPage.Initialize(Runners, NavigateToTool);
+
         Loaded += (_, _) =>
         {
             foreach (var r in Runners.Where(r => r.Config.AutoStart)) r.Start();
@@ -132,7 +134,7 @@ public partial class MainWindow : Window
 
     private void Add_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new ToolEditWindow(new ToolConfig(), ExistingNames(null)) { Owner = this };
+        var dlg = new ToolEditWindow(new ToolConfig(), OtherTools(null)) { Owner = this };
         if (dlg.ShowDialog() != true) return;
 
         var runner = new ToolRunner(dlg.Result, Dispatcher);
@@ -145,11 +147,64 @@ public partial class MainWindow : Window
 
     private void StartAll_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var r in Runners.Where(r => r.CanStart))
+        var toStart = Runners.Where(r => r.CanStart).ToList();
+        if (toStart.Count == 0) return;
+
+        // Cảnh báo trùng port: Yes = vẫn chạy tất cả, No = bỏ qua tool bị trùng, Cancel = không chạy gì
+        var conflicts = toStart
+            .Select(r => (Runner: r, Items: PortService.FindConflicts(r.Config.Ports, r.Pid)))
+            .Where(x => x.Items.Count > 0)
+            .ToList();
+        if (conflicts.Count > 0)
+        {
+            var lines = conflicts.SelectMany(c => c.Items.Select(i => $"• {c.Runner.Config.Name}: {i.Message}"));
+            var answer = MessageBox.Show(
+                "Một số tool bị trùng port:\n\n" + string.Join("\n", lines) +
+                "\n\nYes = vẫn chạy tất cả\nNo = chỉ chạy các tool không bị trùng\nCancel = không chạy",
+                "Tool Manager - trùng port", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (answer == MessageBoxResult.Cancel) return;
+            if (answer == MessageBoxResult.No)
+                toStart = toStart.Except(conflicts.Select(c => c.Runner)).ToList();
+        }
+
+        foreach (var r in toStart)
         {
             r.ResetErrorRestartLimit();
             r.Start();
         }
+    }
+
+    /// <summary>Port của tool đang bị app khác chiếm => hỏi có chạy tiếp không. true = chạy.</summary>
+    private bool ConfirmPortConflicts(ToolRunner r)
+    {
+        var conflicts = PortService.FindConflicts(r.Config.Ports, r.Pid);
+        if (conflicts.Count == 0) return true;
+        var msg = string.Join("\n", conflicts.Select(c => "• " + c.Message));
+        return MessageBox.Show(
+                   $"Tool “{r.Config.Name}” có thể không chạy được vì trùng port:\n\n{msg}\n\nVẫn chạy tool?",
+                   "Tool Manager - trùng port", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No)
+               == MessageBoxResult.Yes;
+    }
+
+    // ================== Chuyển tab ==================
+
+    private void Tab_Checked(object sender, RoutedEventArgs e)
+    {
+        if (PortsPage == null || ToolsPage == null) return; // đang InitializeComponent
+        bool ports = PortsTab.IsChecked == true;
+        ToolsPage.Visibility = ports ? Visibility.Collapsed : Visibility.Visible;
+        PortsPage.Visibility = ports ? Visibility.Visible : Visibility.Collapsed;
+        if (ports) PortsPage.Activate();
+        else PortsPage.Deactivate(); // tool vẫn chạy bình thường, chỉ dừng quét port
+    }
+
+    /// <summary>Từ tab Ports: chuyển sang tab Tools và chọn tool.</summary>
+    private void NavigateToTool(ToolRunner r)
+    {
+        ToolsTab.IsChecked = true;
+        SearchBox.Text = "";
+        ToolGrid.SelectedItem = r;
+        ToolGrid.ScrollIntoView(r);
     }
 
     private void StopAll_Click(object sender, RoutedEventArgs e)
@@ -179,6 +234,7 @@ public partial class MainWindow : Window
     {
         if (RunnerOf(sender) is not { } r) return;
         ToolGrid.SelectedItem = r;
+        if (!ConfirmPortConflicts(r)) return;
         r.ResetErrorRestartLimit();
         r.Start();
     }
@@ -194,6 +250,7 @@ public partial class MainWindow : Window
     {
         if (RunnerOf(sender) is not { } r) return;
         ToolGrid.SelectedItem = r;
+        if (!ConfirmPortConflicts(r)) return;
         r.ResetErrorRestartLimit();
         r.Restart();
     }
@@ -212,7 +269,7 @@ public partial class MainWindow : Window
 
     private void EditRunner(ToolRunner r)
     {
-        var dlg = new ToolEditWindow(r.Config.Clone(), ExistingNames(r)) { Owner = this };
+        var dlg = new ToolEditWindow(r.Config.Clone(), OtherTools(r)) { Owner = this };
         if (dlg.ShowDialog() != true) return;
 
         r.Config = dlg.Result;
@@ -313,6 +370,7 @@ public partial class MainWindow : Window
 
         _logTimer.Stop();
         _tickTimer.Stop();
+        PortsPage.Deactivate();
         foreach (var r in Runners)
         {
             r.StopForShutdown();
@@ -322,8 +380,8 @@ public partial class MainWindow : Window
 
     // ================== Tiện ích ==================
 
-    private IEnumerable<string> ExistingNames(ToolRunner? except) =>
-        Runners.Where(r => r != except).Select(r => r.Config.Name);
+    private IEnumerable<ToolConfig> OtherTools(ToolRunner? except) =>
+        Runners.Where(r => r != except).Select(r => r.Config);
 
     private static void OpenInExplorer(string path, bool select = false)
     {

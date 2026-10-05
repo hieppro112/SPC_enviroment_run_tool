@@ -31,5 +31,16 @@ public class ToolConfig
     /// <summary>"utf-8" hoặc "oem" (code page mặc định của console Windows).</summary>
     public string OutputEncoding { get; set; } = "utf-8";
 
-    public ToolConfig Clone() => (ToolConfig)MemberwiseClone();
+    /// <summary>Port tool sẽ mở (để cảnh báo trùng port khi Start, và loại khỏi danh sách port trống).</summary>
+    public List<int> Ports { get; set; } = new();
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string PortsText => string.Join(", ", Ports);
+
+    public ToolConfig Clone()
+    {
+        var copy = (ToolConfig)MemberwiseClone();
+        copy.Ports = new List<int>(Ports);
+        return copy;
+    }
 }

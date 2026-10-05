@@ -1,0 +1,48 @@
+<Window x:Class="ToolManager.Views.PortReserveWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Đặt trước port" Width="440" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource SurfaceBrush}"
+        FontFamily="{StaticResource AppFont}" FontSize="13"
+        Foreground="{StaticResource TextBrush}"
+        UseLayoutRounding="True">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="24,22,24,20">
+            <DockPanel Margin="0,0,0,16">
+                <Border DockPanel.Dock="Left" Width="40" Height="40" CornerRadius="10" Background="{StaticResource WarningSoftBrush}">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE718;" FontSize="16"
+                               Foreground="{StaticResource WarningBrush}" HorizontalAlignment="Center"/>
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderTitle" FontSize="17" FontWeight="SemiBold"/>
+                    <TextBlock Text="Port đặt trước sẽ không được gợi ý là port trống nữa" FontSize="12"
+                               Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource FieldLabel}">
+                <Run Text="Dành cho app / ghi chú"/><Run Text=" *" Foreground="{StaticResource DangerBrush}"/>
+            </TextBlock>
+            <TextBox x:Name="NoteBox"/>
+            <TextBlock Text="Ví dụ: API_BatchInput bản test, team QC" Style="{StaticResource HintText}" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Hủy" IsCancel="True" MinWidth="90" Margin="0,0,8,0"/>
+                    <Button Content="Đặt trước" Style="{StaticResource PrimaryButton}" IsDefault="True" MinWidth="110" Click="Save_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="ErrorText" VerticalAlignment="Center" FontWeight="SemiBold"
+                           Foreground="{StaticResource DangerTextBrush}"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
