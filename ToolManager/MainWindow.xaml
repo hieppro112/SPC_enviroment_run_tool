@@ -1,7 +1,8 @@
 <Window x:Class="ToolManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Tool Manager" Height="840" Width="1320" MinWidth="980" MinHeight="620"
+        xmlns:views="clr-namespace:ToolManager.Views"
+        Title="Tool Manager" Height="840" Width="1320" MinWidth="1080" MinHeight="700"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBrush}"
         FontFamily="{StaticResource AppFont}" FontSize="13"
@@ -26,8 +27,25 @@
                                HorizontalAlignment="Center"/>
                 </Border>
                 <StackPanel DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="Tool Manager" FontSize="17" FontWeight="SemiBold"/>
+                    <TextBlock Text="KVH - IT" FontSize="17" FontWeight="SemiBold"/>
                     <TextBlock Text="Quản lý và giám sát các tool chạy nền" FontSize="12" Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+
+                <!-- Tab chuyển màn hình -->
+                <Rectangle DockPanel.Dock="Left" Width="1" Height="28" Fill="{StaticResource LineBrush}" Margin="24,0,16,0"/>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="ToolsTab" Style="{StaticResource NavTab}" IsChecked="True" Checked="Tab_Checked">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE71D;" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Tools"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="PortsTab" Style="{StaticResource NavTab}" Checked="Tab_Checked">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconText}" Text="&#xE968;" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Ports"/>
+                        </StackPanel>
+                    </RadioButton>
                 </StackPanel>
 
                 <Button DockPanel.Dock="Right" Click="OpenLogRoot_Click" ToolTip="Mở thư mục chứa toàn bộ file log">
@@ -45,8 +63,11 @@
             </DockPanel>
         </Border>
 
-        <!-- ===================== Nội dung ===================== -->
-        <Grid Grid.Row="1" Margin="24,20,24,0">
+        <!-- ===================== Trang Ports ===================== -->
+        <views:PortsView Grid.Row="1" x:Name="PortsPage" Margin="24,20,24,0" Visibility="Collapsed"/>
+
+        <!-- ===================== Trang Tools ===================== -->
+        <Grid Grid.Row="1" x:Name="ToolsPage" Margin="24,20,24,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="3*" MinHeight="200"/>
@@ -180,8 +201,15 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Config.Name}" FontSize="13.5" FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Config.Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Border Style="{StaticResource Chip}" Margin="8,0,0,0" Padding="7,1"
+                                                        Visibility="{Binding Config.PortsText, Converter={StaticResource EmptyToCollapsed}}">
+                                                    <TextBlock FontSize="11" FontFamily="{StaticResource MonoFont}" Foreground="{StaticResource NeutralTextBrush}"
+                                                               Text="{Binding Config.PortsText, StringFormat='port {0}'}"/>
+                                                </Border>
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Config.ExePath}" FontSize="11.5" Margin="0,2,0,0"
                                                        Foreground="{StaticResource TextMutedBrush}"
                                                        TextTrimming="CharacterEllipsis"

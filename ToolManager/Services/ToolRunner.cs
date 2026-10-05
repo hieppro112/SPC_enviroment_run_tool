@@ -158,6 +158,10 @@ public sealed partial class ToolRunner : ObservableObject, IDisposable
             return;
         }
 
+        // Mọi lần start (kể cả tự chạy lại) đều ghi cảnh báo trùng port vào log
+        foreach (var c in PortService.FindConflicts(cfg.Ports, null))
+            AppendSystem($"Cảnh báo: {c.Message}. Tool có thể không mở được port.");
+
         var workDir = string.IsNullOrWhiteSpace(cfg.WorkingDirectory)
             ? Path.GetDirectoryName(cfg.ExePath)!
             : cfg.WorkingDirectory;

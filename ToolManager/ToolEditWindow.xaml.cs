@@ -9,15 +9,17 @@ namespace ToolManager;
 public partial class ToolEditWindow : Window
 {
     private readonly HashSet<string> _otherNames;
+    private readonly List<ToolConfig> _otherTools;
 
     public ToolConfig Result { get; }
 
-    public ToolEditWindow(ToolConfig config, IEnumerable<string> otherNames)
+    public ToolEditWindow(ToolConfig config, IEnumerable<ToolConfig> otherTools)
     {
         InitializeComponent();
         MaxHeight = SystemParameters.WorkArea.Height - 40; // màn hình thấp thì phần thân form tự cuộn
         Result = config;
-        _otherNames = new HashSet<string>(otherNames, StringComparer.OrdinalIgnoreCase);
+        _otherTools = otherTools.ToList();
+        _otherNames = new HashSet<string>(_otherTools.Select(t => t.Name), StringComparer.OrdinalIgnoreCase);
 
         bool isNew = string.IsNullOrEmpty(config.Name);
         Title = isNew ? "Thêm tool" : $"Sửa tool - {config.Name}";
@@ -27,6 +29,7 @@ public partial class ToolEditWindow : Window
         NameBox.Text = config.Name;
         ExeBox.Text = config.ExePath;
         ArgsBox.Text = config.Arguments;
+        PortsBox.Text = config.PortsText;
         WorkDirBox.Text = config.WorkingDirectory;
         AutoStartCheck.IsChecked = config.AutoStart;
         AutoRestartCheck.IsChecked = config.AutoRestart;
@@ -83,10 +86,28 @@ public partial class ToolEditWindow : Window
             Warn("Số lỗi để restart phải từ 1 đến 1000.", ErrorCountBox);
             return;
         }
+        if (!TryParsePorts(PortsBox.Text, out var ports))
+        {
+            Warn("Port phải là số từ 1 đến 65535, nhiều port cách nhau bằng dấu phẩy.", PortsBox);
+            return;
+        }
+
+        // Port đã khai báo cho tool khác: chỉ cảnh báo, vẫn cho lưu nếu người dùng muốn
+        var dup = ports
+            .SelectMany(p => _otherTools.Where(t => t.Ports.Contains(p)).Select(t => $"• Port {p} đã khai báo cho tool “{t.Name}”"))
+            .ToList();
+        if (dup.Count > 0 &&
+            MessageBox.Show(this, string.Join("\n", dup) + "\n\nHai tool chạy cùng lúc sẽ bị trùng port. Vẫn lưu?",
+                "Trùng port", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+        {
+            PortsBox.Focus();
+            return;
+        }
 
         Result.Name = name;
         Result.ExePath = exe;
         Result.Arguments = ArgsBox.Text.Trim();
+        Result.Ports = ports;
         Result.WorkingDirectory = workDir;
         Result.AutoStart = AutoStartCheck.IsChecked == true;
         Result.AutoRestart = AutoRestartCheck.IsChecked == true;
@@ -98,6 +119,18 @@ public partial class ToolEditWindow : Window
         Result.OutputEncoding = OemRadio.IsChecked == true ? "oem" : "utf-8";
 
         DialogResult = true;
+    }
+
+    /// <summary>"5044, 5045" => [5044, 5045]. Ô trống => danh sách rỗng.</summary>
+    private static bool TryParsePorts(string text, out List<int> ports)
+    {
+        ports = new List<int>();
+        foreach (var part in text.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!int.TryParse(part, out var p) || p < 1 || p > 65535) return false;
+            if (!ports.Contains(p)) ports.Add(p);
+        }
+        return true;
     }
 
     /// <summary>Hiện lỗi ngay trên form (footer) thay vì bật MessageBox.</summary>

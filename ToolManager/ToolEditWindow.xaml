@@ -82,21 +82,27 @@
                     <TextBox x:Name="ArgsBox"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2">
-                    <TextBlock Text="Thư mục làm việc" Style="{StaticResource FieldLabel}"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="WorkDirBox"/>
-                        <Button Grid.Column="1" Click="BrowseDir_Click" Margin="6,0,0,0" Padding="10,7" ToolTip="Chọn thư mục">
-                            <TextBlock Style="{StaticResource IconText}" Text="&#xE838;" FontSize="13"/>
-                        </Button>
-                    </Grid>
+                    <TextBlock Text="Port tool sử dụng" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="PortsBox" FontFamily="{StaticResource MonoFont}"
+                             ToolTip="Vd: 5044 hoặc 5044, 5045. Để trống nếu tool không mở port."/>
                 </StackPanel>
             </Grid>
+            <TextBlock Text="Khai báo port để được cảnh báo khi Start mà port đang bị app khác chiếm. Port này cũng không được gợi ý ở tab Ports."
+                       Style="{StaticResource HintText}" Margin="0,0,0,14"/>
+
+            <TextBlock Text="Thư mục làm việc" Style="{StaticResource FieldLabel}"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="WorkDirBox"/>
+                <Button Grid.Column="1" Click="BrowseDir_Click" Margin="6,0,0,0" Padding="10,7" ToolTip="Chọn thư mục">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE838;" FontSize="13"/>
+                </Button>
+            </Grid>
             <TextBlock Text="Để trống thư mục làm việc = dùng thư mục chứa file exe (giống khi double-click exe)."
-                       Style="{StaticResource HintText}" Margin="0,0,0,18"/>
+                       Style="{StaticResource HintText}" Margin="0,6,0,18"/>
 
             <TextBlock Text="CÁCH CHẠY" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
 

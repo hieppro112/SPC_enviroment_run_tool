@@ -24,13 +24,32 @@ public static class ConfigStore
         return JsonSerializer.Deserialize<List<ToolConfig>>(json, JsonOptions) ?? new();
     }
 
-    public static void Save(IEnumerable<ToolConfig> tools)
+    public static void Save(IEnumerable<ToolConfig> tools) => WriteJson(ConfigPath, tools.ToList());
+
+    public static string PortSettingsPath => Path.Combine(BaseDir, "ports.json");
+
+    public static PortSettings LoadPortSettings()
     {
-        var json = JsonSerializer.Serialize(tools.ToList(), JsonOptions);
-        // Ghi ra file tạm rồi thay thế để không hỏng tools.json nếu bị tắt giữa chừng
-        var tmp = ConfigPath + ".tmp";
+        if (!File.Exists(PortSettingsPath)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<PortSettings>(File.ReadAllText(PortSettingsPath), JsonOptions) ?? new();
+        }
+        catch
+        {
+            return new(); // file hỏng thì dùng mặc định, không làm sập app
+        }
+    }
+
+    public static void SavePortSettings(PortSettings settings) => WriteJson(PortSettingsPath, settings);
+
+    private static void WriteJson<T>(string path, T value)
+    {
+        var json = JsonSerializer.Serialize(value, JsonOptions);
+        // Ghi ra file tạm rồi thay thế để không hỏng file nếu bị tắt giữa chừng
+        var tmp = path + ".tmp";
         File.WriteAllText(tmp, json);
-        File.Move(tmp, ConfigPath, overwrite: true);
+        File.Move(tmp, path, overwrite: true);
     }
 
     /// <summary>Xóa file log cũ hơn số ngày chỉ định (chỉ trong thư mục logs của ToolManager).</summary>
