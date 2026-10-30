@@ -14,13 +14,13 @@ public static class WebRegistryService
 {
     public const string CreateTableScript =
         """
-        CREATE TABLE dbo.WebRegistry (
+        CREATE TABLE dbo.ToolManagerWebRegistry (
             Id        INT IDENTITY(1,1) PRIMARY KEY,
             Name      NVARCHAR(200) NOT NULL,              -- Tên web, vd: Dashboard HeatGuide
             Url       NVARCHAR(500) NOT NULL,              -- vd: http://192.168.122.15:5000/
             Note      NVARCHAR(500) NULL,
-            IsActive  BIT NOT NULL CONSTRAINT DF_WebRegistry_IsActive DEFAULT (1),
-            UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_WebRegistry_UpdatedAt DEFAULT (SYSDATETIME())
+            IsActive  BIT NOT NULL CONSTRAINT DF_ToolManagerWebRegistry_IsActive DEFAULT (1),
+            UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_ToolManagerWebRegistry_UpdatedAt DEFAULT (SYSDATETIME())
         );
         """;
 

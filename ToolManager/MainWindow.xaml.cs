@@ -145,6 +145,12 @@ public partial class MainWindow : Window
         UpdateSummary();
     }
 
+    private void DeployRequest_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Views.DeployRequestWindow(Runners.Select(r => r.Config.Name)) { Owner = this };
+        dlg.ShowDialog();
+    }
+
     private void StartAll_Click(object sender, RoutedEventArgs e)
     {
         var toStart = Runners.Where(r => r.CanStart).ToList();

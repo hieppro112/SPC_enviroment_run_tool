@@ -156,6 +156,14 @@
                                 <TextBlock Text="Thêm tool"/>
                             </StackPanel>
                         </Button>
+                        <Button DockPanel.Dock="Right" Click="DeployRequest_Click" Margin="0,0,8,0"
+                                ToolTip="Chọn folder repo, gửi yêu cầu cho Claude Code tạo deploy.cmd / rollback.cmd">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource IconText}" Text="&#xE8F4;" FontSize="12" Margin="0,0,8,0"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Tạo từ repo"/>
+                            </StackPanel>
+                        </Button>
                         <Button DockPanel.Dock="Right" Click="StopAll_Click" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Style="{StaticResource IconText}" Text="&#xE71A;" FontSize="12" Margin="0,0,8,0"
