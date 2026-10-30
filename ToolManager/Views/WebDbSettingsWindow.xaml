@@ -98,7 +98,7 @@
                 <Button HorizontalAlignment="Left" Style="{StaticResource SmallButton}" Margin="0,8,0,0" Click="CopyScript_Click">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource IconText}" Text="&#xE8C8;" FontSize="11" Margin="0,0,6,0"/>
-                        <TextBlock Text="Copy script tạo bảng dbo.WebRegistry"/>
+                        <TextBlock Text="Copy script tạo bảng dbo.ToolManagerWebRegistry"/>
                     </StackPanel>
                 </Button>
 

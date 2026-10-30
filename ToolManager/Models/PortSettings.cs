@@ -18,7 +18,7 @@ public class PortSettings
 
 public class WebDbSettings
 {
-    public const string DefaultQuery = "SELECT Name, Url FROM dbo.WebRegistry WHERE IsActive = 1";
+    public const string DefaultQuery = "SELECT Name, Url FROM dbo.ToolManagerWebRegistry WHERE IsActive = 1";
 
     /// <summary>Chuỗi kết nối đã mã hóa bằng Windows DPAPI (chỉ tài khoản Windows này trên máy này giải mã được).</summary>
     public string ProtectedConnection { get; set; } = "";

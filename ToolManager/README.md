@@ -54,7 +54,23 @@ Chạy bằng quyền thường: app chạy bằng admin/SYSTEM chỉ hiện tê
 - Port của web trên máy này (kể cả web đang tắt) **không được gợi ý là port trống**.
 - Đọc database khi mở tab Ports, sau đó tối đa 60 giây / lần (bấm "Tải lại" để đọc ngay).
 - Cấu hình: nút **Cấu hình database**. Nên dùng **tài khoản Windows** (không lưu mật khẩu, tài khoản cần quyền `SELECT` trên bảng). Dùng tài khoản SQL thì mật khẩu không hiện lại trên form; chuỗi kết nối lưu trong `ports.json` đã **mã hóa Windows DPAPI** (chỉ tài khoản Windows đó trên máy đó giải mã được; copy `ports.json` sang máy khác phải cấu hình lại).
-- Câu truy vấn mặc định `SELECT Name, Url FROM dbo.WebRegistry WHERE IsActive = 1`, sửa được. Bảng có tên cột khác thì dùng `AS Name`, `AS Url`.
+- Câu truy vấn mặc định `SELECT Name, Url FROM dbo.ToolManagerWebRegistry WHERE IsActive = 1`, sửa được. Bảng có tên cột khác thì dùng `AS Name`, `AS Url`.
+
+## Tạo deploy từ repo (giai đoạn 1 + 2)
+
+Nút **Tạo từ repo** ở tab Tools: chọn folder đã `git clone` / `git pull` về máy này, đặt tên tool, ghi chú (không bắt buộc) rồi **Gửi yêu cầu**. Yêu cầu được ghi vào bảng `dbo.ToolManagerDeployRequest`; **DeployWorker** chạy trên cùng máy nhận yêu cầu và gọi Claude Code tạo `deploy.cmd` / `rollback.cmd`.
+
+- Dùng chung database với danh sách web (tab Ports > **Cấu hình database**). Script tạo bảng: [docs/deploy-request.sql](docs/deploy-request.sql) (hoặc nút "Copy script tạo bảng" trong cửa sổ). Tài khoản cần quyền `SELECT, INSERT, UPDATE` trên bảng.
+- Mỗi yêu cầu gắn với **tên máy** (`MachineName`): cửa sổ chỉ hiện yêu cầu của máy này, worker chỉ nhận yêu cầu của máy mình.
+- Folder đã có yêu cầu đang chờ / đang tạo thì không gửi thêm. Yêu cầu **Chờ xử lý** hủy được; worker đã nhận thì không hủy được.
+- Cửa sổ hiện loại project nhận ra được (pom.xml, pubspec.yaml, *.csproj, package.json...), nhánh git và folder đã có `deploy.cmd` chưa. Danh sách tự tải lại mỗi 5 giây.
+- Ghi chú gửi cho Claude: không ghi mật khẩu, key hay token.
+
+### DeployWorker
+
+Worker là project riêng ở `D:\jobs\IT\pcx\manegerLog\DeployWorker` (cách build, cài vào Tool Manager, cách xử lý yêu cầu: xem [README của DeployWorker](../../DeployWorker/README.md)). Chạy như 1 tool trong Tool Manager trên mỗi máy cần tạo deploy.
+
+**Luôn đọc `deploy.cmd` / `rollback.cmd` Claude tạo trước khi chạy.**
 
 ## Lưu ý
 
@@ -77,6 +93,9 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 - `Services/ConfigStore.cs`: đọc/ghi `tools.json`, `ports.json`, dọn log cũ
 - `Services/PortService.cs`: đọc port đang mở (API `GetExtendedTcpTable`, giống `netstat -ano`), PID cha/con, thử bind, tìm port trống, dải Windows giữ chỗ
 - `Services/WebRegistryService.cs`: đọc danh sách web từ SQL Server, lọc web của máy này, mã hóa chuỗi kết nối (DPAPI)
+- `Services/DeployRequestService.cs`: ghi / đọc / hủy yêu cầu trong `dbo.ToolManagerDeployRequest`, đọc nhanh thông tin folder
+- `Views/DeployRequestWindow.xaml`: cửa sổ "Tạo deploy từ repo"
+- Worker nhận yêu cầu: project riêng `D:\jobs\IT\pcx\manegerLog\DeployWorker`
 - `Views/PortsView.xaml`: tab Ports; `Views/PortReserveWindow.xaml`: hộp thoại đặt trước port; `Views/WebDbSettingsWindow.xaml`: cấu hình database
 - `Themes/Light.xaml`: toàn bộ màu sắc, font và style (nút, ô nhập, công tắc, bảng, thanh cuộn, badge trạng thái). Muốn đổi màu chủ đạo thì sửa `AccentBrush`
 - `Converters/`: tô màu dòng log, tách phần giờ trong log
