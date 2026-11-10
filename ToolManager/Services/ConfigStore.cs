@@ -43,6 +43,24 @@ public static class ConfigStore
 
     public static void SavePortSettings(PortSettings settings) => WriteJson(PortSettingsPath, settings);
 
+    public static string DeployImportPath => Path.Combine(BaseDir, "deploy-import.json");
+
+    /// <summary>null = chưa có file (lần đầu dùng tính năng tự thêm tool từ repo).</summary>
+    public static DeployImportState? LoadDeployImportState()
+    {
+        if (!File.Exists(DeployImportPath)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<DeployImportState>(File.ReadAllText(DeployImportPath), JsonOptions);
+        }
+        catch
+        {
+            return null; // file hỏng: đặt lại mốc như lần đầu, không tự thêm lại các tool cũ
+        }
+    }
+
+    public static void SaveDeployImportState(DeployImportState state) => WriteJson(DeployImportPath, state);
+
     private static void WriteJson<T>(string path, T value)
     {
         var json = JsonSerializer.Serialize(value, JsonOptions);

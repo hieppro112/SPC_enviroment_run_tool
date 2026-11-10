@@ -56,7 +56,7 @@ Chạy bằng quyền thường: app chạy bằng admin/SYSTEM chỉ hiện tê
 - Cấu hình: nút **Cấu hình database**. Nên dùng **tài khoản Windows** (không lưu mật khẩu, tài khoản cần quyền `SELECT` trên bảng). Dùng tài khoản SQL thì mật khẩu không hiện lại trên form; chuỗi kết nối lưu trong `ports.json` đã **mã hóa Windows DPAPI** (chỉ tài khoản Windows đó trên máy đó giải mã được; copy `ports.json` sang máy khác phải cấu hình lại).
 - Câu truy vấn mặc định `SELECT Name, Url FROM dbo.ToolManagerWebRegistry WHERE IsActive = 1`, sửa được. Bảng có tên cột khác thì dùng `AS Name`, `AS Url`.
 
-## Tạo deploy từ repo (giai đoạn 1 + 2)
+## Tạo deploy từ repo
 
 Nút **Tạo từ repo** ở tab Tools: chọn folder đã `git clone` / `git pull` về máy này, đặt tên tool, ghi chú (không bắt buộc) rồi **Gửi yêu cầu**. Yêu cầu được ghi vào bảng `dbo.ToolManagerDeployRequest`; **DeployWorker** chạy trên cùng máy nhận yêu cầu và gọi Claude Code tạo `deploy.cmd` / `rollback.cmd`.
 
@@ -65,6 +65,14 @@ Nút **Tạo từ repo** ở tab Tools: chọn folder đã `git clone` / `git pu
 - Folder đã có yêu cầu đang chờ / đang tạo thì không gửi thêm. Yêu cầu **Chờ xử lý** hủy được; worker đã nhận thì không hủy được.
 - Cửa sổ hiện loại project nhận ra được (pom.xml, pubspec.yaml, *.csproj, package.json...), nhánh git và folder đã có `deploy.cmd` chưa. Danh sách tự tải lại mỗi 5 giây.
 - Ghi chú gửi cho Claude: không ghi mật khẩu, key hay token.
+
+### Tự thêm tool khi yêu cầu xong
+
+- Tool Manager kiểm tra mỗi 15 giây (kể cả khi đã đóng cửa sổ "Tạo từ repo"). Yêu cầu của máy này vừa **Xong** thì tự **thêm tool** theo cấu hình Claude gợi ý (`ResultJson`: file chạy, tham số, thư mục làm việc, port, ẩn cửa sổ). Tool được thêm ở trạng thái **Đã dừng**, không tự chạy khi mở Tool Manager, tắt "Tự restart khi log có lỗi". Tên trùng thì thêm hậu tố `(2)`, `(3)`.
+- Yêu cầu vừa **Lỗi** thì hiện thông báo kèm lý do. Thông báo hiện ở thanh màu xanh trên danh sách tool (bấm X để ẩn).
+- Yêu cầu đã xử lý được ghi trong `deploy-import.json` cạnh exe: tool đã xóa khỏi danh sách không bị thêm lại. Lần đầu dùng tính năng, các yêu cầu đã xong từ trước **không tự thêm**; muốn thêm thì mở "Tạo từ repo", bấm nút **+** ở dòng yêu cầu đó.
+- Tool có `deploy.cmd` trong thư mục làm việc (thêm tự động hoặc thêm tay) có thêm 2 nút: **Chạy deploy** (mở cửa sổ cmd chạy `deploy.cmd`, hỏi xác nhận trước) và **Xem script** (mở `deploy.cmd` / `rollback.cmd` bằng Notepad). Chưa có `run\version.txt` (chưa deploy lần nào) thì hiện nhãn vàng **Chưa deploy**.
+- Quy trình: Gửi yêu cầu → tool tự xuất hiện → Xem script → Chạy deploy → thấy `=== Xong` → Start.
 
 ### DeployWorker
 
@@ -93,7 +101,8 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 - `Services/ConfigStore.cs`: đọc/ghi `tools.json`, `ports.json`, dọn log cũ
 - `Services/PortService.cs`: đọc port đang mở (API `GetExtendedTcpTable`, giống `netstat -ano`), PID cha/con, thử bind, tìm port trống, dải Windows giữ chỗ
 - `Services/WebRegistryService.cs`: đọc danh sách web từ SQL Server, lọc web của máy này, mã hóa chuỗi kết nối (DPAPI)
-- `Services/DeployRequestService.cs`: ghi / đọc / hủy yêu cầu trong `dbo.ToolManagerDeployRequest`, đọc nhanh thông tin folder
+- `Services/DeployRequestService.cs`: ghi / đọc / hủy yêu cầu trong `dbo.ToolManagerDeployRequest`, đọc nhanh thông tin folder, tạo cấu hình tool từ `ResultJson`
+- `Models/DeployImportState.cs`: yêu cầu đã tự thêm / đã báo (`deploy-import.json`)
 - `Views/DeployRequestWindow.xaml`: cửa sổ "Tạo deploy từ repo"
 - Worker nhận yêu cầu: project riêng `D:\jobs\IT\pcx\manegerLog\DeployWorker`
 - `Views/PortsView.xaml`: tab Ports; `Views/PortReserveWindow.xaml`: hộp thoại đặt trước port; `Views/WebDbSettingsWindow.xaml`: cấu hình database

@@ -49,6 +49,7 @@ public sealed partial class ToolRunner : ObservableObject, IDisposable
     {
         _config = config;
         _ui = ui;
+        RefreshDeployInfo();
     }
 
     public ObservableCollection<string> Logs { get; } = new();
@@ -62,8 +63,45 @@ public sealed partial class ToolRunner : ObservableObject, IDisposable
             if (!SetField(ref _config, value)) return;
             // Đổi tên tool => log ghi sang thư mục mới
             lock (_fileLock) { _logWriter?.Dispose(); _logWriter = null; }
+            RefreshDeployInfo();
         }
     }
+
+    // ================== deploy.cmd trong thư mục làm việc ==================
+    // Repo có deploy.cmd (tạo tay hoặc từ "Tạo từ repo"): hiện nút Chạy deploy / Xem script.
+    // Chưa có run\version.txt (deploy.cmd ghi sau khi build xong) => nhãn "Chưa deploy".
+
+    /// <summary>Thư mục làm việc thực tế: để trống = thư mục chứa file exe.</summary>
+    public string WorkDir => string.IsNullOrWhiteSpace(Config.WorkingDirectory)
+        ? Path.GetDirectoryName(Config.ExePath) ?? ""
+        : Config.WorkingDirectory;
+
+    public string DeployScriptPath => Path.Combine(WorkDir, "deploy.cmd");
+
+    private bool _hasDeployScript;
+    public bool HasDeployScript { get => _hasDeployScript; private set => SetField(ref _hasDeployScript, value); }
+
+    private bool _needsDeploy;
+    public bool NeedsDeploy { get => _needsDeploy; private set => SetField(ref _needsDeploy, value); }
+
+    private int _deployInfoTicks;
+
+    public void RefreshDeployInfo()
+    {
+        try
+        {
+            var dir = WorkDir;
+            HasDeployScript = dir.Length > 0 && File.Exists(Path.Combine(dir, "deploy.cmd"));
+            NeedsDeploy = HasDeployScript && !File.Exists(Path.Combine(dir, "run", "version.txt"));
+        }
+        catch
+        {
+            HasDeployScript = NeedsDeploy = false; // đường dẫn sai định dạng
+        }
+    }
+
+    /// <summary>Ghi 1 dòng thông báo của Tool Manager (>>>) vào log của tool.</summary>
+    public void Note(string message) => AppendSystem(message);
 
     private ToolState _state = ToolState.Stopped;
     public ToolState State
@@ -509,6 +547,11 @@ public sealed partial class ToolRunner : ObservableObject, IDisposable
     public void Tick()
     {
         if (_startedAt.HasValue) Uptime = FormatDuration(DateTime.Now - _startedAt.Value);
+        if (++_deployInfoTicks >= 5) // deploy.cmd chạy ở cửa sổ riêng: 5 giây kiểm tra lại 1 lần
+        {
+            _deployInfoTicks = 0;
+            RefreshDeployInfo();
+        }
 
         if (_errorRestartArmed && State == ToolState.Running && DateTime.Now - _lastErrorLineAt >= ErrorBurstWindow)
         {

@@ -34,6 +34,9 @@ public class ToolConfig
     /// <summary>Port tool sẽ mở (để cảnh báo trùng port khi Start, và loại khỏi danh sách port trống).</summary>
     public List<int> Ports { get; set; } = new();
 
+    /// <summary>Tool được thêm tự động từ yêu cầu "Tạo từ repo" nào (dbo.ToolManagerDeployRequest.Id). null = thêm tay.</summary>
+    public int? DeployRequestId { get; set; }
+
     [System.Text.Json.Serialization.JsonIgnore]
     public string PortsText => string.Join(", ", Ports);
 

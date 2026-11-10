@@ -18,7 +18,9 @@ public partial class MainWindow : Window
 
     private readonly DispatcherTimer _logTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private readonly DispatcherTimer _tickTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _deployTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly ICollectionView _view;
+    private bool _deployChecking;
 
     public MainWindow()
     {
@@ -39,14 +41,17 @@ public partial class MainWindow : Window
         _tickTimer.Tick += (_, _) => TickAll();
         _logTimer.Start();
         _tickTimer.Start();
+        _deployTimer.Tick += async (_, _) => await CheckDeployResultsAsync();
 
         PortsPage.Initialize(Runners, NavigateToTool);
 
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
             foreach (var r in Runners.Where(r => r.Config.AutoStart)) r.Start();
             if (Runners.Count > 0) ToolGrid.SelectedIndex = 0;
             UpdateSummary();
+            _deployTimer.Start();
+            await CheckDeployResultsAsync();
         };
     }
 
@@ -147,8 +152,146 @@ public partial class MainWindow : Window
 
     private void DeployRequest_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new Views.DeployRequestWindow(Runners.Select(r => r.Config.Name)) { Owner = this };
+        var dlg = new Views.DeployRequestWindow(Runners.Select(r => r.Config.Name), ImportDeployResult) { Owner = this };
         dlg.ShowDialog();
+    }
+
+    // ================== Tạo từ repo: tự thêm tool khi yêu cầu xong ==================
+
+    /// <summary>
+    /// Mỗi 15 giây: yêu cầu "Tạo từ repo" của máy này vừa Xong => thêm tool (chưa chạy); vừa Lỗi => báo.
+    /// Chưa cấu hình database / lỗi kết nối thì bỏ qua, lần sau thử lại.
+    /// </summary>
+    private async Task CheckDeployResultsAsync()
+    {
+        if (_deployChecking) return;
+        var cs = DeployRequestService.GetConnectionString(out _);
+        if (cs == null) return;
+
+        _deployChecking = true;
+        try
+        {
+            var state = ConfigStore.LoadDeployImportState();
+            if (state == null)
+            {
+                // Lần đầu: yêu cầu đã xong từ trước không tự thêm (có thể đã thêm tay). Thêm tay trong cửa sổ "Tạo từ repo".
+                var baseline = await Task.Run(() => DeployRequestService.MaxFinishedIdAsync(cs));
+                ConfigStore.SaveDeployImportState(new DeployImportState { BaselineId = baseline });
+                return;
+            }
+
+            var rows = await Task.Run(() => DeployRequestService.ListFinishedAsync(cs, state.BaselineId));
+            var notes = new List<string>();
+            foreach (var r in rows.Where(r => !state.HandledIds.Contains(r.Id)))
+            {
+                state.HandledIds.Add(r.Id);
+                notes.Add(r.Status == DeployRequestStatus.Failed
+                    ? $"Yêu cầu #{r.Id} ({r.ToolName}) bị lỗi: {Shorten(r.ErrorLog)} Xem chi tiết ở “Tạo từ repo”."
+                    : ImportDeployResult(r).Message);
+            }
+            if (notes.Count == 0) return;
+
+            if (state.HandledIds.Count > 500) state.HandledIds.RemoveRange(0, state.HandledIds.Count - 500);
+            ConfigStore.SaveDeployImportState(state);
+            ShowDeployNotice(notes);
+        }
+        catch
+        {
+            // Mất kết nối database tạm thời: lần sau thử lại
+        }
+        finally
+        {
+            _deployChecking = false;
+        }
+    }
+
+    /// <summary>Thêm tool từ kết quả của yêu cầu (dùng chung cho tự thêm và nút trong cửa sổ "Tạo từ repo"). Trả về thông báo.</summary>
+    private (bool Ok, string Message) ImportDeployResult(DeployRequest r)
+    {
+        if (Runners.FirstOrDefault(x => x.Config.DeployRequestId == r.Id) is { } existing)
+            return (true, $"Tool “{existing.Config.Name}” đã có trong danh sách (yêu cầu #{r.Id}).");
+
+        var cfg = DeployRequestService.BuildToolConfig(r, Runners.Select(x => x.Config.Name), out var warning);
+        if (cfg == null) return (false, $"Yêu cầu #{r.Id} ({r.ToolName}): không thêm được tool, {warning}");
+
+        var runner = new ToolRunner(cfg, Dispatcher);
+        Runners.Add(runner);
+        SaveTools();
+        UpdateSummary();
+
+        // Thêm tay từ cửa sổ "Tạo từ repo" cũng đánh dấu đã xử lý, để vòng kiểm tra tự động không báo lại
+        if (ConfigStore.LoadDeployImportState() is { } st && !st.HandledIds.Contains(r.Id))
+        {
+            st.HandledIds.Add(r.Id);
+            ConfigStore.SaveDeployImportState(st);
+        }
+        runner.Note($"Thêm từ yêu cầu “Tạo từ repo” #{r.Id}: {r.FolderPath}");
+        runner.Note("Đọc deploy.cmd (nút Xem script), bấm Chạy deploy, chờ “=== Xong” rồi bấm Start.");
+        if (warning != null) runner.Note("Lưu ý: " + warning);
+
+        return (true, $"Đã thêm tool “{cfg.Name}” (yêu cầu #{r.Id}). Xem script, bấm Chạy deploy, xong thì Start."
+                      + (warning != null ? " Lưu ý: " + warning : ""));
+    }
+
+    private void ShowDeployNotice(IEnumerable<string> lines)
+    {
+        DeployNoticeText.Text = string.Join(Environment.NewLine, lines);
+        DeployNotice.Visibility = Visibility.Visible;
+    }
+
+    private void CloseDeployNotice_Click(object sender, RoutedEventArgs e) => DeployNotice.Visibility = Visibility.Collapsed;
+
+    private static string Shorten(string? s)
+    {
+        var line = (s ?? "").Split('\n')[0].Trim();
+        return line.Length <= 140 ? line : line[..140] + "...";
+    }
+
+    private void RunDeploy_Click(object sender, RoutedEventArgs e)
+    {
+        if (RunnerOf(sender) is not { } r) return;
+        ToolGrid.SelectedItem = r;
+        r.RefreshDeployInfo();
+        var script = r.DeployScriptPath;
+        if (!r.HasDeployScript)
+        {
+            MessageBox.Show($"Không thấy {script}.", "Tool Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var running = r.IsRunning
+            ? "\n\nTool đang chạy: nếu cửa sổ deploy nhắc “Bam STOP…” thì bấm Stop ở Tool Manager, xong bấm Start."
+            : "\n\nChạy xong (thấy “=== Xong”) thì bấm Start.";
+        if (MessageBox.Show($"Chạy deploy.cmd của “{r.Config.Name}”?\n\n{script}\n\nHãy đọc script trước (nút Xem script).{running}",
+                "Chạy deploy", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+        try
+        {
+            // Cửa sổ cmd riêng (/k: giữ cửa sổ để đọc kết quả), người dùng thấy tiến trình build và lời nhắc Stop
+            Process.Start(new ProcessStartInfo("cmd.exe", $"/k \"\"{script}\"\"")
+            {
+                WorkingDirectory = r.WorkDir,
+                UseShellExecute = true,
+            });
+            r.Note("Đã mở cửa sổ chạy deploy.cmd.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không chạy được deploy.cmd:\n{ex.Message}", "Tool Manager", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ViewDeployScript_Click(object sender, RoutedEventArgs e)
+    {
+        if (RunnerOf(sender) is not { } r) return;
+        ToolGrid.SelectedItem = r;
+        var files = new[] { "deploy.cmd", "rollback.cmd" }.Select(f => Path.Combine(r.WorkDir, f)).Where(File.Exists).ToList();
+        if (files.Count == 0)
+        {
+            MessageBox.Show($"Không thấy deploy.cmd trong {r.WorkDir}.", "Tool Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        foreach (var f in files) Process.Start(new ProcessStartInfo("notepad.exe", $"\"{f}\"") { UseShellExecute = true });
     }
 
     private void StartAll_Click(object sender, RoutedEventArgs e)
@@ -376,6 +519,7 @@ public partial class MainWindow : Window
 
         _logTimer.Stop();
         _tickTimer.Stop();
+        _deployTimer.Stop();
         PortsPage.Deactivate();
         foreach (var r in Runners)
         {

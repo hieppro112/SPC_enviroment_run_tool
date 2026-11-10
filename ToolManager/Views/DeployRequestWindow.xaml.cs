@@ -21,12 +21,15 @@ public partial class DeployRequestWindow : Window
     private string? _connectionString;
     private bool _loading;
     private bool _nameEdited; // người dùng đã tự sửa tên tool thì không tự điền theo folder nữa
+    private readonly Func<DeployRequest, (bool Ok, string Message)>? _importTool;
 
-    public DeployRequestWindow(IEnumerable<string> existingToolNames)
+    /// <param name="importTool">Thêm tool từ yêu cầu đã xong vào danh sách của Tool Manager, trả về thông báo.</param>
+    public DeployRequestWindow(IEnumerable<string> existingToolNames, Func<DeployRequest, (bool Ok, string Message)>? importTool = null)
     {
         InitializeComponent();
         MaxHeight = SystemParameters.WorkArea.Height - 40;
         _toolNames = new HashSet<string>(existingToolNames, StringComparer.OrdinalIgnoreCase);
+        _importTool = importTool;
 
         ListTitle.Text = $"YÊU CẦU GẦN ĐÂY TRÊN MÁY {Environment.MachineName.ToUpperInvariant()}";
         ToolNameBox.TextChanged += (_, _) => { if (ToolNameBox.IsKeyboardFocusWithin) _nameEdited = true; };
@@ -177,6 +180,13 @@ public partial class DeployRequestWindow : Window
         {
             ShowStatus(false, "Không hủy được yêu cầu: " + FriendlyError(ex));
         }
+    }
+
+    private void Import_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not DeployRequest r || _importTool == null) return;
+        var (ok, msg) = _importTool(r);
+        ShowStatus(ok, msg);
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
