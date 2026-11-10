@@ -1,5 +1,7 @@
 using System.IO;
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
+using ToolManager.Models;
 
 namespace ToolManager.Services;
 
@@ -14,7 +16,8 @@ public sealed record DeployRequest(
     string RequestedBy,
     DateTime CreatedAt,
     DateTime? FinishedAt,
-    string? ErrorLog)
+    string? ErrorLog,
+    string? ResultJson = null)
 {
     public string StatusText => Status switch
     {
@@ -31,6 +34,9 @@ public sealed record DeployRequest(
 
     public bool CanCancel => Status == DeployRequestStatus.Pending;
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorLog);
+
+    /// <summary>Xong và có cấu hình tool gợi ý: thêm được vào danh sách tool.</summary>
+    public bool CanImport => Status == DeployRequestStatus.Done && !string.IsNullOrWhiteSpace(ResultJson);
 }
 
 /// <summary>
@@ -125,18 +131,59 @@ public static class DeployRequestService
     {
         const string sql =
             """
-            SELECT TOP (@top) Id, FolderPath, ToolName, Status, RequestedBy, CreatedAt, FinishedAt, ErrorLog
+            SELECT TOP (@top) Id, FolderPath, ToolName, Status, RequestedBy, CreatedAt, FinishedAt, ErrorLog, ResultJson
             FROM dbo.ToolManagerDeployRequest
             WHERE MachineName = @machine
             ORDER BY Id DESC;
             """;
 
-        var list = new List<DeployRequest>();
         await using var conn = new SqlConnection(connectionString);
         await conn.OpenAsync(ct);
         await using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 15 };
         cmd.Parameters.AddWithValue("@top", top);
         cmd.Parameters.AddWithValue("@machine", Environment.MachineName);
+        return await ReadRequestsAsync(cmd, ct);
+    }
+
+    /// <summary>Yêu cầu Xong / Lỗi của máy này có Id &gt; afterId, cũ nhất trước (để tự thêm tool / báo lỗi).</summary>
+    public static async Task<List<DeployRequest>> ListFinishedAsync(string connectionString, int afterId, CancellationToken ct = default)
+    {
+        const string sql =
+            """
+            SELECT TOP (50) Id, FolderPath, ToolName, Status, RequestedBy, CreatedAt, FinishedAt, ErrorLog, ResultJson
+            FROM dbo.ToolManagerDeployRequest
+            WHERE MachineName = @machine AND Status IN (N'Done', N'Failed') AND Id > @after
+            ORDER BY Id;
+            """;
+
+        await using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 15 };
+        cmd.Parameters.AddWithValue("@machine", Environment.MachineName);
+        cmd.Parameters.AddWithValue("@after", afterId);
+        return await ReadRequestsAsync(cmd, ct);
+    }
+
+    /// <summary>Id lớn nhất trong các yêu cầu đã Xong / Lỗi của máy này (0 nếu chưa có).</summary>
+    public static async Task<int> MaxFinishedIdAsync(string connectionString, CancellationToken ct = default)
+    {
+        const string sql =
+            """
+            SELECT ISNULL(MAX(Id), 0) FROM dbo.ToolManagerDeployRequest
+            WHERE MachineName = @machine AND Status IN (N'Done', N'Failed');
+            """;
+
+        await using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 15 };
+        cmd.Parameters.AddWithValue("@machine", Environment.MachineName);
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));
+    }
+
+    /// <summary>Đọc các cột: Id, FolderPath, ToolName, Status, RequestedBy, CreatedAt, FinishedAt, ErrorLog, ResultJson.</summary>
+    private static async Task<List<DeployRequest>> ReadRequestsAsync(SqlCommand cmd, CancellationToken ct)
+    {
+        var list = new List<DeployRequest>();
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
@@ -148,9 +195,91 @@ public static class DeployRequestService
                 reader.GetString(4),
                 reader.GetDateTime(5),
                 reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                reader.IsDBNull(7) ? null : reader.GetString(7)));
+                reader.IsDBNull(7) ? null : reader.GetString(7),
+                reader.IsDBNull(8) ? null : reader.GetString(8)));
         }
         return list;
+    }
+
+    // ================== Tạo cấu hình tool từ kết quả của worker ==================
+
+    /// <summary>
+    /// ResultJson (phần "tool") => ToolConfig chưa chạy: không tự Start khi mở Tool Manager, tắt tự restart khi log có lỗi.
+    /// null + message = không tạo được. Có cấu hình nhưng message != null = cảnh báo (vd chưa thấy file chạy).
+    /// </summary>
+    public static ToolConfig? BuildToolConfig(DeployRequest r, IEnumerable<string> existingNames, out string? message)
+    {
+        message = null;
+        if (string.IsNullOrWhiteSpace(r.ResultJson))
+        {
+            message = "yêu cầu chưa có kết quả.";
+            return null;
+        }
+
+        JsonElement tool;
+        try
+        {
+            using var doc = JsonDocument.Parse(r.ResultJson);
+            if (!doc.RootElement.TryGetProperty("tool", out var t) || t.ValueKind != JsonValueKind.Object)
+            {
+                message = "kết quả không có cấu hình tool.";
+                return null;
+            }
+            tool = t.Clone();
+        }
+        catch (JsonException ex)
+        {
+            message = "không đọc được kết quả: " + ex.Message;
+            return null;
+        }
+
+        string Str(string name) =>
+            tool.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString()!.Trim() : "";
+
+        var exe = Str("exePath");
+        if (exe.Length == 0) exe = Str("exe");
+        if (exe.Length == 0)
+        {
+            message = "kết quả không có file chạy (tool.exePath).";
+            return null;
+        }
+
+        var ports = new List<int>();
+        if (tool.TryGetProperty("ports", out var pa) && pa.ValueKind == JsonValueKind.Array)
+            foreach (var p in pa.EnumerateArray())
+                if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var port) && port is > 0 and < 65536 && !ports.Contains(port))
+                    ports.Add(port);
+
+        // Tên trùng tool có sẵn thì thêm hậu tố (2), (3)...
+        var names = new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase);
+        var baseName = Str("name") is { Length: > 0 } n ? n : r.ToolName;
+        var name = baseName;
+        for (int i = 2; names.Contains(name); i++) name = $"{baseName} ({i})";
+
+        var workDir = Str("workingDirectory");
+        var cfg = new ToolConfig
+        {
+            Name = name,
+            ExePath = exe,
+            Arguments = Str("arguments"),
+            WorkingDirectory = workDir.Length > 0 ? workDir : r.FolderPath,
+            Ports = ports,
+            HideWindow = !(tool.TryGetProperty("hideWindow", out var h) && h.ValueKind == JsonValueKind.False),
+            AutoStart = false,
+            AutoRestart = true,
+            RestartDelaySeconds = 10,
+            RestartOnError = false,
+            DeployRequestId = r.Id,
+        };
+
+        if (!File.Exists(exe))
+        {
+            var runDir = Path.Combine(cfg.WorkingDirectory, "run") + Path.DirectorySeparatorChar;
+            message = exe.StartsWith(runDir, StringComparison.OrdinalIgnoreCase)
+                ? "file chạy nằm trong run\\, sẽ có sau khi chạy deploy.cmd."
+                : $"chưa thấy file chạy {exe}, hãy sửa tool (nút bút chì) trước khi Start.";
+        }
+        return cfg;
     }
 
     /// <summary>Hủy yêu cầu đang chờ. false = worker đã nhận (hoặc đã xong) nên không hủy được.</summary>

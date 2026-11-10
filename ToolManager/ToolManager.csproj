@@ -18,6 +18,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Kết nối SQL Server bằng code .NET (managed) thay cho thư viện native Microsoft.Data.SqlClient.SNI.dll.
+      SNI native đôi khi làm app văng AccessViolationException trong ExecuteReaderAsync (không bắt được bằng try/catch).
+    -->
+    <RuntimeHostConfigurationOption Include="Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows" Value="true" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
   </ItemGroup>

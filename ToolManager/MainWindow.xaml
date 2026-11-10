@@ -135,8 +135,21 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
+
+                    <!-- Thông báo tool vừa tự thêm từ "Tạo từ repo" / yêu cầu bị lỗi -->
+                    <Border Grid.Row="1" x:Name="DeployNotice" Visibility="Collapsed" Margin="18,0,18,10"
+                            CornerRadius="8" Padding="12,8" Background="{StaticResource AccentSoftBrush}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource SmallIconButton}" Content="&#xE711;"
+                                    ToolTip="Ẩn thông báo" Click="CloseDeployNotice_Click" VerticalAlignment="Top"/>
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource IconText}" Text="&#xE8F4;" FontSize="14"
+                                       Foreground="{StaticResource AccentBrush}" Margin="0,2,10,0" VerticalAlignment="Top"/>
+                            <TextBlock x:Name="DeployNoticeText" TextWrapping="Wrap" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
 
                     <DockPanel Grid.Row="0" Margin="18,14" LastChildFill="False">
                         <DockPanel.Resources>
@@ -200,7 +213,7 @@
                         </Grid>
                     </DockPanel>
 
-                    <DataGrid Grid.Row="1" x:Name="ToolGrid" Style="{StaticResource ToolDataGrid}"
+                    <DataGrid Grid.Row="2" x:Name="ToolGrid" Style="{StaticResource ToolDataGrid}"
                               ItemsSource="{Binding Runners}" Margin="0,0,0,8"
                               SelectionChanged="ToolGrid_SelectionChanged"
                               MouseDoubleClick="ToolGrid_MouseDoubleClick">
@@ -216,6 +229,12 @@
                                                         Visibility="{Binding Config.PortsText, Converter={StaticResource EmptyToCollapsed}}">
                                                     <TextBlock FontSize="11" FontFamily="{StaticResource MonoFont}" Foreground="{StaticResource NeutralTextBrush}"
                                                                Text="{Binding Config.PortsText, StringFormat='port {0}'}"/>
+                                                </Border>
+                                                <Border Style="{StaticResource Chip}" Margin="6,0,0,0" Padding="7,1"
+                                                        Background="{StaticResource WarningSoftBrush}"
+                                                        ToolTip="Thư mục làm việc có deploy.cmd nhưng chưa có run\version.txt: bấm nút Chạy deploy, xong thì Start."
+                                                        Visibility="{Binding NeedsDeploy, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningTextBrush}" Text="Chưa deploy"/>
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Config.ExePath}" FontSize="11.5" Margin="0,2,0,0"
@@ -274,7 +293,7 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTemplateColumn Header="THAO TÁC" Width="236">
+                            <DataGridTemplateColumn Header="THAO TÁC" Width="306">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -287,6 +306,15 @@
                                             <Button Style="{StaticResource IconButton}" Content="&#xE72C;" ToolTip="Restart"
                                                     Foreground="{StaticResource AccentBrush}" Click="Restart_Click"/>
                                             <Rectangle Width="1" Height="18" Fill="{StaticResource LineBrush}" Margin="6,0"/>
+                                            <StackPanel Orientation="Horizontal"
+                                                        Visibility="{Binding HasDeployScript, Converter={StaticResource BoolToVisibility}}">
+                                                <Button Style="{StaticResource IconButton}" Content="&#xE898;"
+                                                        ToolTip="Chạy deploy.cmd (pull + build bản mới) trong cửa sổ riêng"
+                                                        Foreground="{StaticResource AccentBrush}" Click="RunDeploy_Click"/>
+                                                <Button Style="{StaticResource IconButton}" Content="&#xE943;"
+                                                        ToolTip="Xem deploy.cmd / rollback.cmd" Click="ViewDeployScript_Click"/>
+                                                <Rectangle Width="1" Height="18" Fill="{StaticResource LineBrush}" Margin="6,0"/>
+                                            </StackPanel>
                                             <Button Style="{StaticResource IconButton}" Content="&#xE70F;" ToolTip="Sửa cấu hình"
                                                     Click="Edit_Click"/>
                                             <Button Style="{StaticResource IconDangerButton}" Content="&#xE74D;" ToolTip="Xóa khỏi danh sách"
@@ -299,7 +327,7 @@
                     </DataGrid>
 
                     <!-- Trạng thái trống -->
-                    <StackPanel Grid.Row="1" x:Name="EmptyState" Visibility="Collapsed"
+                    <StackPanel Grid.Row="2" x:Name="EmptyState" Visibility="Collapsed"
                                 HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,30,0,0">
                         <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource NeutralSoftBrush}" HorizontalAlignment="Center">
                             <TextBlock Style="{StaticResource IconText}" Text="&#xE71D;" FontSize="22"

@@ -127,6 +127,9 @@
                                 <DataTemplate>
                                     <DockPanel Margin="0,0,4,8">
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                            <Button Style="{StaticResource SmallIconButton}" Content="&#xE710;" Margin="0,0,4,0"
+                                                    ToolTip="Thêm vào danh sách tool (theo cấu hình Claude gợi ý)" Tag="{Binding}" Click="Import_Click"
+                                                    Visibility="{Binding CanImport, Converter={StaticResource BoolToVisibility}}"/>
                                             <Button Style="{StaticResource SmallIconButton}" Content="&#xE838;" Margin="0,0,4,0"
                                                     ToolTip="Mở folder" Tag="{Binding}" Click="OpenFolder_Click"/>
                                             <Button Style="{StaticResource SmallIconButton}" Content="&#xE711;"
